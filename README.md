@@ -1,60 +1,43 @@
 # LogDrop
-## Covert C2 using public HTTP access logs / Indexed Command and Control / Ekoparty 2023
+## Covert C2 using Public HTTP Access Logs / Indexed Command and Control / Ekoparty 2023
 
 by Buanzo
 
-### Abstract
+# Abstract
 
-LogDrop is a proof-of-concept tool developed by Buanzo and to be presented
-at Ekoparty 2023.  This tool exploits publicly accessible `access_log` files
-as a unique means for passive command-and-control propagation.
+Unveiled at Ekoparty 2023, LogDrop is a proof-of-concept tool. It highlights how an often-overlooked aspect of server security—publicly accessible access_log files—can be exploited for passive command and control (C2) operations.
 
-### The Problem
-The Internet is full of web servers with bad security settings. One common mistake is making server
-access logs public and easy to find. LogDrop shines a light on this issue by showing how these logs
-can be used for hidden data storage and remote control operations.
+# The Problem
 
-LogDrop is a demo tool that proves you can use access_log files for sneaky command-and-control (C2)
-actions. But, to keep it from being used for bad stuff, we've skipped adding any encryption features.
-This guide walks you through what LogDrop can do and its limitations.
+Incorrectly configured web servers sometimes expose access logs to the public. LogDrop exposes this security flaw by demonstrating how these logs can be used for covert data storage and command execution.
 
-**Note:** This tool and method are original ideas by Buanzo, created for educational and demo use at Ekoparty 2023.
+Note: LogDrop is an original concept by Buanzo, created solely for educational purposes and will be featured at Ekoparty 2023. The technique was originally published in 2600 Magazine
 
-### Key Commands
+# Key Commands
 
-#### `logdrop find`
+# logdrop write
+## Description
+Embeds data into a targeted access_log file by triggering a custom URL. You can modify the access_log_url variable so it is fed with appropriate targets for your testing environment. A "vulnerable_webserver.py" script is included that listens on http://localhost:8080 - This repo also includes htdocs folder, an index.html and the logs folder inside htdocs.
 
-##### Description
-Scours the web using Google Dork to find `access_log` files containing a specific hash derived from a campaign
-identifier (needle). Lists the most recent entries first. These could be responses, commands, etc.
+## Usage
+logdrop write "NEEDLE" --data "DATA_TO_WRITE"
 
-##### Usage
+# logdrop search
+## Description
+Scans the specified access_log file for entries that match the hashed needle, decrypting and displaying any found data.
 
-```bash
-logdrop find --needle "CAMPAIGN_IDENTIFIER"
-```
+## Usage
+logdrop search "NEEDLE"
 
-Sends a predefined command to selected `access_log` files. This will hash the needle and the command, allowing
-clients to find and recognize it.
+# logdrop monitor
+## Description
+Continuously polls the specified access_log file for new entries that match the hashed needle. Decrypts and displays any found data at a specified interval.
 
-##### Usage
-```bash
-logdrop push --needle "CAMPAIGN_IDENTIFIER" --command PING
-```
+## Usage
+logdrop monitor "NEEDLE" --interval SECONDS
 
-Pushes the PING command into the campaign. Confirmation that the command was inserted into the targeted `access_log` files.
+# Ethical Considerations and Limitations
 
-### List of Valid Commands
-- `PING`: Ask clients to identify themselves by sending PONGs to the campaign.
-- `PONG`: Response to PING from client[s].
-- `DATA_DUMP`: Request data (not implemented).
-- `SLEEP`: Put client to sleep for a specific duration (not implemented).
-- `EXIT`: Terminate client (not implemented).
-
-
-### Ethical Considerations and Limitations
-
-1. **No Cryptographic Security**: This PoC avoids using cryptographic techniques to help clients validate commands, hence...:
-2. **Anyone Can Inject Commands**: Given that there's no authentication or cryptographic integrity checks, anyone can issue commands to a campaign if they know the campaign identifier (needle).
-3. **Purpose and Intent**: The primary aim is to demonstrate that the technique is feasible. It is not intended for actual C2 operations but for educational and research purposes.
-4. **Legal Concerns**: Be aware of the legal implications and make sure you have proper authorization before using LogDrop.
+1. Anyone Can Inject Commands: Without cryptographic integrity checks, anyone can issue commands if they know the needle.
+2. Purpose and Intent: Designed for educational and research purposes, not for operational use.
+3. Legal Concerns: This tool should only be used in authorized environments. Be aware of the legal implications.

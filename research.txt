@@ -1,0 +1,152 @@
+~ $ cat idea.txt
+Indexed command and control
+---------------------------
+by Buanzo
+
+Abstract: Some admins leave access_log files, current or backups, in folders
+that are web-accesible from the Internet. When those are indexed, they would
+make lovely passive command-and-control propagation mechanism, as long as
+the owner knows how to get data written into them.
+
+
+* DORK: "index of" access_log 2019-10-28
+
+* use TOR to generate http[s] requests to servers that seem to be publishing
+access_log files
+
+* use TOR to access those files
+
+CAVEAT: shit gets stored
+
+* Example: Use google dork. FInd one with small size. Found one:
+
+-> I included that by http://www.vnsestudio.com/TU_VIEJA
+
+http://www.XXXXXXXXvnsestudio.com/access_log has TU_VIEJA:
+ 68.168.100.132 - - [29/Oct/2019:13:42:07 -0300] "GET /TU_VIEJA HTTP/1.1" 404 505
+
+
+$ cat python_tor.txt
+import requests
+import json
+
+proxies = {
+    'http': 'socks5h://127.0.0.1:9050',
+    'https': 'socks5h://127.0.0.1:9050'
+}
+
+data = requests.get("https://altaddresswcxlld.onion",proxies=proxies).text
+
+print(data)
+
+
+
+~ $ cat prueba.py~
+#!/usr/bin/env python3
+import sys
+from pprint import pprint
+
+try:
+    from googlesearch import search
+except( ImportError):
+    print("No module named 'google' found")
+    sys.exit(1)
+
+# vars
+aLogs = []
+firma = '/TU_VIEJA'
+fecha = '2019-10-28'
+# to search
+query = "'index of' {} access_log".format(fecha)
+
+for j in search(query, num=10, stop=10, pause=3):
+    aLogs.append("{}access_log".format(j))
+
+pprint(aLogs)
+
+# Usar las url de j para ir probando access_log, obtener las ultimas lineas, ver si se acerca
+# a la fecha actual.
+# Si uno funciona, hacer una prueba get 404 y verificarla
+# si verifica, reportar, usar o lo que sea
+
+~ $ cat access_log_in_htdocs.py
+#!/usr/bin/env python3
+import sys
+import requests
+import urllib3
+urllib3.disable_warnings()
+from pprint import pprint
+
+try:
+    from googlesearch import search
+except( ImportError):
+    print("No module named 'google' found")
+    sys.exit(1)
+
+BLOCK_SIZE = 32*1024
+# vars
+aLogs = []
+firma = '/TU_VIEJA'  # TODO: vendra de arg o config
+fecha = '2019-10-28' # TODO: debe ser dinamico
+# to search
+query = "'index of' {} access_log".format(fecha)
+
+for j in search(query, num=10, stop=10, pause=3):
+    aLogs.append("{}access_log".format(j))
+
+# Usar las url de j para ir probando access_log, obtener las ultimas lineas, ver si se acerca
+# a la fecha actual.
+# Si uno funciona, hacer una prueba get 404 y verificarla
+# si verifica, reportar, usar o lo que sea
+
+candidates = []
+for aLog in aLogs:
+    # get content-length so we can use range to get stuff from end of file
+    print("Testing {}".format(aLog))
+    r = requests.head(aLog,verify=False)
+    h = r.headers
+    try:
+        if h['Accept-Ranges'] == 'bytes' and \
+            'Content-Length' in h.keys():
+            candidates.append({'url':aLog, 'len': h['Content-Length']})
+    except Exception:
+        pass
+
+for candidate in candidates:
+    # now that we have some servers that support Range, and meet our search criteria
+    # we can try to find our signature
+    url = candidate['url']
+    len = candidate['len']
+    headers = {"Range": "bytes={}-{}".format(int(len)-BLOCK_SIZE,len)}
+    pprint(headers)
+    r = requests.get(url, headers=headers, verify=False)
+    #print(r.text)
+    if (r.text.find(firma) > -1):
+        print(r.text)
+        sys.exit(1)
+
+~ $ cat 2600_article.txt
+Hello hackers all over the world!
+
+I am not sure if this technique is well known, as far as I can tell no one is using it [probably for a reason], but I have not seen it covered so, here it goes.
+
+People tend to use sites such as pastebin and other websites to post information to.
+
+Some time ago I was wondering about different methods for saving data to 'the internet' without having to register, validate I'm not a bot, etc, etc. So my mind wandered a bit... "what gets written all over the internet, directly or indirectly?" LOG FILES.
+
+So a simple google dork for access_log and "index of" provided me with a nice bunch of servers publishing httpd access_log. And yes, I could create an interesting URL... for instance www.example.com/THIS_DOES_NOT_EXIST_YYYYMMDDHHMMSS_ARBITRARY_DATA ... and yes, I would find a matching 404 for "/THIS_DOES_NOT_EXIST_YYYYMMDDHHMMSS_ARBITRARY_DATA"  in www.example.com/logs/access_log ....
+
+Add some tor there... and presto, you have a way to store data. Add some crypto, some structure... and there you go, a way to store information for a long time (google cache, wayback, etc, etc)... without having to do anything but a simple HTTP GET.
+
+I might put some tools up on github, but please go ahead, and have fun with this extremely simple method.
+
+I was thinking, this could be used as a method for c&c that does not require... well... almost anything. A supply of badly configured web servers maybe :P
+
+Cheers!
+by Buanzo
+
+
+
+
+https://www.google.com/search?q=%22inurl:access_log%22+intitle:%22index+of%22+-inurl:http&filter=0
+"inurl:access_log" intitle:"index of" -inurl:http
